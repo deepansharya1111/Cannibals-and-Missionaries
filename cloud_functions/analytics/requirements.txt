@@ -1,0 +1,5 @@
+functions-framework==3.*
+firebase-admin==6.*
+google-cloud-firestore==2.*
+google-cloud-core>=2.0.0
+google-api-core>=2.0.0 

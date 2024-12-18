@@ -1,0 +1,7 @@
+1. game code
+2. gemini text api for commentary
+3. firebase for moves counter
+4. audio with text to speech api
+5. better hints
+6. Stats with cloud function and firebase schema upgrade
+7. Update game analysis in stats with gemini API.

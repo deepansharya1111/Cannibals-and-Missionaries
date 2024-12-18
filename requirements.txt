@@ -1,0 +1,4 @@
+pygame==2.1.2
+google-generativeai
+google-api-core
+firebase-admin
