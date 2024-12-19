@@ -67,6 +67,7 @@ class LakeCrossingGame:
         self.audio_playing = False
         
         self.first_move = None
+        self.game_over_screen_drawn = False  # Add this new flag
         
     def setup_firebase(self):
         try:
@@ -180,6 +181,8 @@ class LakeCrossingGame:
         # Create new session if resetting after completion
         if hasattr(self, 'game_over') and self.game_over and self.db:
             self.create_game_session()
+        
+        self.game_over_screen_drawn = False  # Reset the flag when game restarts
 
     def load_images(self):
         self.background = pygame.transform.scale(pygame.image.load(resource_path("background.png")).convert(), (self.width, self.height))
@@ -237,7 +240,9 @@ class LakeCrossingGame:
         self.draw_scores()
         
         if self.game_over:
-            print("Drawing game over screen")  # Debug print
+            if not self.game_over_screen_drawn:  # Only print once
+                print("Drawing game over screen")  # Debug print
+                self.game_over_screen_drawn = True
             self.draw_game_over_screen()
         
         self.draw_button(self.hint_button, "Hint")
@@ -249,7 +254,8 @@ class LakeCrossingGame:
         
         # Draw analytics if showing
         if hasattr(self, 'show_stats') and self.show_stats and hasattr(self, 'last_analytics'):
-            self.display_analytics(self.last_analytics)
+            if hasattr(self, 'analytics_surface'):
+                self.screen.blit(self.analytics_surface, (350, 50))
         
         pygame.display.flip()
 
@@ -556,16 +562,20 @@ class LakeCrossingGame:
         current_state = self.get_game_state_string()
         
         prompt = f"""
-        You are a creative narrator for the Lake Crossing Game. The current game state is:
+        You are a creative and enthusiastic commentator for the Lake Crossing Game. You act as the voiceover for the particular game character that moves and speak on their behalf as if it was a real being. The current game state is:
 
         {current_state}
 
         Provide a brief, engaging narration about the current situation. Your narration should:
-        1. Be very concise (max 100 characters)
-        2. Focus on the tension between the carnivores and priests
+        1. Keep it under 100 characters.
+        2. Focus on the tension between the carnivores and priests and speak as a real being.
         3. Avoid repetitive phrases and questioning tones
         4. Be varied in tone (sometimes humorous, sometimes tense)
         5. Portray the carnivores as predators eager to outnumber the priests
+        6. Uses dynamic language and energy
+        7. Focuses on the strategic moves and tension.
+        8. Use present tense.
+        
 
         Narration (max 100 characters):
         """
@@ -676,7 +686,7 @@ class LakeCrossingGame:
         try:
             # Load credentials explicitly
             tts_credentials = service_account.Credentials.from_service_account_file(
-                'YOUR_TEXT_TO_SPEECH_SERVICE_ACCOUNT_CREDENTIALS_JSONn'
+                'YOUR_TEXT_TO_SPEECH_SERVICE_ACCOUNT_CREDENTIALS_JSON'
             )
             self.tts_client = texttospeech.TextToSpeechClient(credentials=tts_credentials)
             self.voice = texttospeech.VoiceSelectionParams(
@@ -754,7 +764,7 @@ class LakeCrossingGame:
         try:
             print("Attempting to fetch analytics...")
             response = requests.get(
-                'REGION-YOUR_PROJECT_ID.cloudfunctions.net/YOUR_CLOUD_EXECUTED_FUNCTION_NAME'
+                'https://us-central1-YOUR_PROJECT_ID.cloudfunctions.net/analyze_gameplay'
             )
             print(f"Response status: {response.status_code}")
             
@@ -774,6 +784,7 @@ class LakeCrossingGame:
                     'total_games': 0
                 }
                 self.last_analysis = "No game data available yet."
+                self.display_analytics(self.last_analytics)
         except Exception as e:
             print(f"Error fetching analytics: {e}")
             # Set default analytics if request fails
@@ -784,6 +795,7 @@ class LakeCrossingGame:
                 'total_games': 0
             }
             self.last_analysis = "Error fetching game analysis."
+            self.display_analytics(self.last_analytics)
 
     def analyze_mistakes_with_gemini(self, analytics_data):
         """Use Gemini to analyze gameplay statistics and provide insights"""
@@ -819,9 +831,9 @@ class LakeCrossingGame:
     def display_analytics(self, analytics):
         """Display analytics on screen"""
         try:
-            print("Displaying analytics...")
-            analytics_surface = pygame.Surface((400, 500), pygame.SRCALPHA)
-            analytics_surface.fill((0, 0, 0, 180))
+            print("Rendering analytics surface...")  # Changed message
+            self.analytics_surface = pygame.Surface((400, 500), pygame.SRCALPHA)
+            self.analytics_surface.fill((0, 0, 0, 180))
             
             stats_font = pygame.font.Font(None, 22)
             
@@ -846,7 +858,7 @@ class LakeCrossingGame:
             ]
             
             # Add Gemini's analysis, wrapped to fit the surface
-            wrapped_analysis = textwrap.wrap(analysis, width=45)  # Adjust width as needed
+            wrapped_analysis = textwrap.wrap(analysis, width=45)
             for line in wrapped_analysis:
                 stats.append(f"  {line}")
             
@@ -865,11 +877,8 @@ class LakeCrossingGame:
                     color = (255, 255, 255)  # White for regular stats
                 
                 text = stats_font.render(stat, True, color)
-                analytics_surface.blit(text, (10, y_offset))
+                self.analytics_surface.blit(text, (10, y_offset))
                 y_offset += 22
-            
-            if hasattr(self, 'show_stats') and self.show_stats:
-                self.screen.blit(analytics_surface, (350, 50))
             
         except Exception as e:
             print(f"Error displaying analytics: {e}")
